@@ -30,6 +30,17 @@
     th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef2f7}
     th{font-size:13px;color:#111827}
     td.small{color:var(--muted);font-size:13px}
+    #textOutput {
+      margin-top: 20px;
+      padding: 12px;
+      background: #eef4ff;
+      border-radius: 8px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      color: #1e293b;
+      min-height: 50px;
+      border: 1px solid #cbd5e1;
+    }
 
     /* responsive */
     @media(max-width:880px){.grid{grid-template-columns:1fr} .logo{display:none}}
@@ -109,6 +120,9 @@
             <tbody></tbody>
           </table>
         </div>
+
+        <!-- New text output block -->
+        <div id="textOutput" aria-live="polite" aria-label="Payment schedule text output"></div>
       </div>
     </div>
   </div>
@@ -192,26 +206,34 @@
     }
 
     function renderSchedule(schedule){
-      const tbody = document.querySelector('#scheduleTable tbody');
-      tbody.innerHTML = '';
-      let total = 0;
-      schedule.forEach((item, idx) => {
-        const tr = document.createElement('tr');
-        const num = document.createElement('td'); num.textContent = idx + 1;
-        const date = document.createElement('td'); date.textContent = prettyDate(item.date);
-        const amt = document.createElement('td'); amt.textContent = formatMoney(item.amount);
-        tr.appendChild(num); tr.appendChild(date); tr.appendChild(amt);
-        tbody.appendChild(tr);
-        total += Number(item.amount);
-      });
+  const tbody = document.querySelector('#scheduleTable tbody');
+  tbody.innerHTML = '';
+  let total = 0;
+  schedule.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    const num = document.createElement('td'); num.textContent = idx + 1;
+    const date = document.createElement('td'); date.textContent = prettyDate(item.date);
+    const amt = document.createElement('td'); amt.textContent = formatMoney(item.amount);
+    tr.appendChild(num); tr.appendChild(date); tr.appendChild(amt);
+    tbody.appendChild(tr);
+    total += Number(item.amount);
+  });
 
-      // update summary
-      $('sTotal').textContent = formatMoney(total);
-      $('sCount').textContent = schedule.length;
-      $('sPayment').textContent = schedule.length ? formatMoney(schedule[0].amount) : '$0.00';
-      $('sLast').textContent = schedule.length ? prettyDate(schedule[schedule.length-1].date) : '—';
-    }
+  // update summary
+  $('sTotal').textContent = formatMoney(total);
+  $('sCount').textContent = schedule.length;
+  $('sPayment').textContent = schedule.length ? formatMoney(schedule[0].amount) : '$0.00';
+  $('sLast').textContent = schedule.length ? prettyDate(schedule[schedule.length-1].date) : '—';
 
+  // Generate the formatted text output
+  let text = `Total Amount of the Instalment Plan: ${formatMoney(total)}\n\nBelow are the dates and amounts for each instalment:\n\n`;
+  schedule.forEach((item, idx) => {
+    text += `•Payment ${idx + 1}: ${formatMoney(item.amount)} due on ${prettyDate(item.date)}\n\n`;
+  });
+  text += 'Please note that each payment will be debited automatically from your account on the respective due date.';
+
+  $('textOutput').textContent = text;
+}
     function downloadCSV(schedule){
       const header = ['Installment #','Due date','Amount'];
       const rows = schedule.map((r,i) => [i + 1, toDMYDateString(r.date), Number(r.amount).toFixed(2)]);
@@ -259,6 +281,7 @@
       $('sCount').textContent = '0';
       $('sPayment').textContent = '$0.00';
       $('sLast').textContent = '—';
+      $('textOutput').textContent = '';
       window._lastSchedule = null;
     });
 
