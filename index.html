@@ -209,7 +209,7 @@
 
     function downloadCSV(schedule){
       const header = ['Installment #','Due date','Amount'];
-      const rows = schedule.map((r,i)=>[i+1,toIsoDateString(r.date),Number(r.amount).toFixed(2)]);
+      const rows = schedule.map((r,i)=>[i+1,prettyDate(r.date),Number(r.amount).toFixed(2)]);;
       const csv = [header].concat(rows).map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
       const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
