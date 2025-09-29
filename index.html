@@ -52,7 +52,7 @@
         <div style="display:grid;gap:12px">
           <div>
             <label>Total amount (numeric)</label>
-            <input id="total" type="number" min="0" step="0.01" value="488" />
+            <input id="total" type="number" min="0" step="0.01" value="" placeholder="Enter total amount" />
           </div>
 
           <div style="display:flex;gap:8px;align-items:center;">
@@ -70,15 +70,15 @@
             <div style="flex:1">
               <label>Frequency</label>
               <select id="frequency">
-                <option value="daily">Daily</option>
+                <option value="daily" selected>Daily</option>
                 <option value="weekly">Weekly</option>
-                <option value="fortnightly" selected>Fortnightly</option>
+                <option value="fortnightly">Fortnightly</option>
                 <option value="monthly">Monthly</option>
               </select>
             </div>
             <div style="width:180px">
               <label>Start date</label>
-              <input id="startDate" type="date" value="2025-10-01" />
+              <input id="startDate" type="date" value="" />
             </div>
           </div>
 
@@ -115,25 +115,22 @@
 
   <script>
     // Utility helpers
-    const $ = id => document.getElementById(id)
-    const formatMoney = v => '$' + Number(v).toFixed(2)
+    const $ = id => document.getElementById(id);
+    const formatMoney = v => '$' + Number(v).toFixed(2);
 
     function addDays(date, days){
-      const d = new Date(date.getTime()); d.setDate(d.getDate() + days); return d;
+      const d = new Date(date.getTime());
+      d.setDate(d.getDate() + days);
+      return d;
     }
 
     function addMonths(date, months){
       const d = new Date(date.getTime());
       const day = d.getDate();
       d.setMonth(d.getMonth() + months);
-      // handle month overflow (Feb 30 -> Mar 2 etc.)
+      // handle month overflow (e.g. Feb 30 -> Mar 2)
       if (d.getDate() < day) d.setDate(0);
       return d;
-    }
-
-    function toIsoDateString(d){
-      const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,'0'); const day = String(d.getDate()).padStart(2,'0');
-      return `${y}-${m}-${day}`;
     }
 
     function prettyDate(d){
@@ -144,11 +141,8 @@
     }
 
     function toDMYDateString(d){
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
-      }
+      return prettyDate(d);
+    }
 
     function computeSchedule({total, perPayment, count, frequency, startDate}){
       total = Number(total);
@@ -161,7 +155,7 @@
         const fullCount = Math.floor(total / perPayment);
         const remainder = +(total - (fullCount * perPayment)).toFixed(2);
         // create fullCount payments of perPayment
-        for(let i=0;i<fullCount;i++){
+        for(let i=0; i<fullCount; i++){
           schedule.push({amount: +perPayment.toFixed(2), date: new Date(current.getTime())});
           current = advance(current, frequency);
         }
@@ -171,7 +165,7 @@
       } else if (count && count > 0){
         const base = Math.floor((total / count) * 100) / 100; // two decimals floor
         let produced = 0;
-        for(let i=0;i<count;i++){
+        for(let i=0; i<count; i++){
           schedule.push({amount: base, date: new Date(current.getTime())});
           produced += base;
           current = advance(current, frequency);
@@ -198,11 +192,12 @@
     }
 
     function renderSchedule(schedule){
-      const tbody = document.querySelector('#scheduleTable tbody'); tbody.innerHTML = '';
+      const tbody = document.querySelector('#scheduleTable tbody');
+      tbody.innerHTML = '';
       let total = 0;
-      schedule.forEach((item,idx)=>{
+      schedule.forEach((item, idx) => {
         const tr = document.createElement('tr');
-        const num = document.createElement('td'); num.textContent = idx+1;
+        const num = document.createElement('td'); num.textContent = idx + 1;
         const date = document.createElement('td'); date.textContent = prettyDate(item.date);
         const amt = document.createElement('td'); amt.textContent = formatMoney(item.amount);
         tr.appendChild(num); tr.appendChild(date); tr.appendChild(amt);
@@ -219,20 +214,29 @@
 
     function downloadCSV(schedule){
       const header = ['Installment #','Due date','Amount'];
-      const rows = schedule.map((r,i)=>[i+1,toDMYDateString(r.date),Number(r.amount).toFixed(2)]);
-      const csv = [header].concat(rows).map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const rows = schedule.map((r,i) => [i + 1, toDMYDateString(r.date), Number(r.amount).toFixed(2)]);
+      const csv = [header].concat(rows)
+        .map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(','))
+        .join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'installment-schedule.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'installment-schedule.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     }
 
     // hookup
-    document.getElementById('generateBtn').addEventListener('click', ()=>{
+    $('generateBtn').addEventListener('click', () => {
       const total = Number($('total').value) || 0;
       const perPayment = $('perPayment').value ? Number($('perPayment').value) : null;
       const count = $('count').value ? Number($('count').value) : null;
       const frequency = $('frequency').value;
       const sd = $('startDate').value;
+
       if (!sd){ alert('Please enter a valid start date'); return; }
       if (total <= 0){ alert('Please enter a total amount greater than zero'); return; }
       if (perPayment !== null && perPayment <= 0){ alert('Installment amount must be greater than zero if provided'); return; }
@@ -241,36 +245,29 @@
       const startDate = new Date(sd + 'T00:00:00');
       const schedule = computeSchedule({total, perPayment, count, frequency, startDate});
       renderSchedule(schedule);
-      // attach to download button
       window._lastSchedule = schedule;
     });
 
-    $('clearBtn').addEventListener('click', ()=>{
+    $('clearBtn').addEventListener('click', () => {
       $('total').value = '';
       $('perPayment').value = '';
       $('count').value = '';
-      $('frequency').value = 'fortnightly';
+      $('frequency').value = 'daily';
       $('startDate').value = '';
       document.querySelector('#scheduleTable tbody').innerHTML = '';
-      $('sTotal').textContent = '$0.00'; $('sCount').textContent='0'; $('sPayment').textContent='$0.00'; $('sLast').textContent='—';
+      $('sTotal').textContent = '$0.00';
+      $('sCount').textContent = '0';
+      $('sPayment').textContent = '$0.00';
+      $('sLast').textContent = '—';
       window._lastSchedule = null;
     });
 
-    $('downloadBtn').addEventListener('click', ()=>{
+    $('downloadBtn').addEventListener('click', () => {
       const s = window._lastSchedule;
       if (!s || !s.length){ alert('No schedule to download. Please generate first.'); return; }
       downloadCSV(s);
     });
 
-    // pre-generate from example values for convenience
-    window.addEventListener('load', ()=>{
-      // prefill example for the user: total 488, payment 30, fortnightly start 2025-10-01
-      $('total').value = '488';
-      $('perPayment').value = '30';
-      $('frequency').value = 'fortnightly';
-      $('startDate').value = '2025-10-01';
-      document.getElementById('generateBtn').click();
-    });
   </script>
 </body>
 </html>
